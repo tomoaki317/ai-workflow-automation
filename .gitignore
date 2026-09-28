@@ -1,0 +1,10 @@
+.env
+.env.*
+*.secret
+
+n8n_data/
+
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
