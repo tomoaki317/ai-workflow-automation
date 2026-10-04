@@ -3,6 +3,7 @@
 *.secret
 
 n8n_data/
+n8n/Inquiry Triage Workflow.json
 
 .vscode/
 .idea/

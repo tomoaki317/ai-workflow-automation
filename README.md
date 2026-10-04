@@ -25,6 +25,16 @@ Webhook
 - Google Sheets
 - Slack
 
+## n8n Workflow
+
+`n8n/inquiry-triage-workflow.public.json` is a sanitized workflow export for public use.
+
+Before importing, configure your own credentials and resource IDs for:
+
+- OpenAI
+- Google Sheets
+- Slack
+
 ## Status
 
 Under development.

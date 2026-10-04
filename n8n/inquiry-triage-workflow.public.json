@@ -1,0 +1,543 @@
+﻿{
+    "name":  "Inquiry Triage Workflow",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "inquiry",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       0,
+                                       0
+                                   ],
+                      "id":  "98ca1ce8-623a-40b8-894d-d846cee276fb",
+                      "name":  "Webhook",
+                      "webhookId":  "6610d3d1-a91a-477e-a82f-9d2dced04175"
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  3
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "0520f3e2-79c3-483f-8e9d-9fffa0e2729c",
+                                                                                   "leftValue":  "={{ $json.body.inquiry_id }}",
+                                                                                   "rightValue":  "",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "notEmpty",
+                                                                                                    "singleValue":  true
+                                                                                                }
+                                                                               },
+                                                                               {
+                                                                                   "id":  "1bbc1e80-9af4-48b4-9478-dda697061f36",
+                                                                                   "leftValue":  "={{ $json.body.message }}",
+                                                                                   "rightValue":  "",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "notEmpty",
+                                                                                                    "singleValue":  true
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       144,
+                                       144
+                                   ],
+                      "id":  "49f99d95-3147-451d-a13a-7a2f94a6337b",
+                      "name":  "If"
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "{\n  \"status\": \"error\",\n  \"message\": \"inquiry_id and message are required\"\n}",
+                                         "options":  {
+                                                         "responseCode":  400
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       512,
+                                       240
+                                   ],
+                      "id":  "d42307a7-43a6-4e4b-ab80-f49672342abe",
+                      "name":  "Respond to Webhook"
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{\n  {\n    status: \"ok\",\n    manual_review: false,\n    notification_sent: true\n  }\n}}",
+                                         "options":  {
+                                                         "responseCode":  200
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       1840,
+                                       -192
+                                   ],
+                      "id":  "342c1c9a-09e7-4f8e-801b-2cabd4222247",
+                      "name":  "Respond to Webhook1"
+                  },
+                  {
+                      "parameters":  {
+                                         "modelId":  {
+                                                         "__rl":  true,
+                                                         "value":  "gpt-5-mini",
+                                                         "mode":  "list",
+                                                         "cachedResultName":  "GPT-5-MINI"
+                                                     },
+                                         "responses":  {
+                                                           "values":  [
+                                                                          {
+                                                                              "content":  "=以下の問い合わせ内容を分類してください。\n\n問い合わせ:\n{{ $json.body.message }}\n\n以下のJSON形式で返してください。\n\n{\n  \"category\": \"system_trouble | account | contract | general | other\",\n  \"priority\": \"high | medium | low\",\n  \"summary\": \"問い合わせ内容の簡潔な要約\",\n  \"required_action\": \"次に確認すべき内容\"\n}\n\nルール:\n- summaryには、入力文に明示されている事実だけを書いてください\n- 入力文にない緊急性、原因、影響範囲を推測しないでください\nただし、入力文にない緊急性や原因は追加しないでください。\n- required_actionは、確認すべき情報や調査項目に限定してください\n- 実施が確定していない対応を、実施すべきこととして断定しないでください\n- 情報が不足している場合は、その不足情報を確認項目として記載してください\n- JSON以外の文章は返さないでください"
+                                                                          },
+                                                                          {
+
+                                                                          }
+                                                                      ]
+                                                       },
+                                         "builtInTools":  {
+
+                                                          },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.openAi",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       288,
+                                       -48
+                                   ],
+                      "id":  "32a7b80b-95ed-4287-9c8a-19e724e2c5cc",
+                      "name":  "Message a model",
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "YOUR_CREDENTIAL_ID",
+                                                            "name":  "OpenAI account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const raw = $json.output?.[0]?.content?.[0]?.text;\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (error) {\n  return [\n    {\n      json: {\n        valid: false,\n        manual_review: true,\n        reason: \"invalid_json\",\n        raw_output: raw\n      }\n    }\n  ];\n}\n\nconst allowedCategories = [\n  \"system_trouble\",\n  \"account\",\n  \"contract\",\n  \"general\",\n  \"other\"\n];\n\nconst allowedPriorities = [\n  \"high\",\n  \"medium\",\n  \"low\"\n];\n\nconst valid =\n  allowedCategories.includes(parsed.category) \u0026\u0026\n  allowedPriorities.includes(parsed.priority) \u0026\u0026\n  typeof parsed.summary === \"string\" \u0026\u0026\n  parsed.summary.trim() !== \"\" \u0026\u0026\n  typeof parsed.required_action === \"string\" \u0026\u0026\n  parsed.required_action.trim() !== \"\";\n\nreturn [\n  {\n    json: {\n      inquiry_id: $(\"Webhook\").first().json.body.inquiry_id,\n      received_at: new Date().toISOString(),\n      valid,\n      manual_review: !valid,\n      reason: valid ? null : \"invalid_schema_or_value\",\n      analysis: parsed\n    }\n  }\n];"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       752,
+                                       -32
+                                   ],
+                      "id":  "42282a09-2d88-4cd3-9214-4aa64fa00e1a",
+                      "name":  "Code in JavaScript"
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  3
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "01bc2a64-2649-445e-a95d-f416991716a5",
+                                                                                   "leftValue":  "={{ $json.valid }}",
+                                                                                   "rightValue":  "",
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "true",
+                                                                                                    "singleValue":  true
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       944,
+                                       -32
+                                   ],
+                      "id":  "36109b6b-c643-415e-80f7-3f196d927ea7",
+                      "name":  "If1"
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "{\n  \"status\": \"manual_review\",\n  \"message\": \"AI output could not be validated\"\n}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       1296,
+                                       304
+                                   ],
+                      "id":  "0ea86287-2af8-47fd-a909-3d1e23a22873",
+                      "name":  "Respond to Webhook2"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "append",
+                                         "documentId":  {
+                                                            "__rl":  true,
+                                                            "value":  "YOUR_SPREADSHEET_ID",
+                                                            "mode":  "list",
+                                                            "cachedResultName":  "inquiry_triage_log",
+                                                            "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit"
+                                                        },
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "gid=0",
+                                                           "mode":  "list",
+                                                           "cachedResultName":  "シート1",
+                                                           "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=0"
+                                                       },
+                                         "columns":  {
+                                                         "mappingMode":  "defineBelow",
+                                                         "value":  {
+                                                                       "inquiry_id":  "={{ $json.inquiry_id }}",
+                                                                       "received_at":  "={{ $json.received_at }}",
+                                                                       "category":  "={{ $json.analysis.category }}",
+                                                                       "priority":  "={{ $json.analysis.priority }}",
+                                                                       "summary":  "={{ $json.analysis.summary }}",
+                                                                       "required_action":  "={{ $json.analysis.required_action }}",
+                                                                       "manual_review":  "={{ $json.manual_review }}"
+                                                                   },
+                                                         "matchingColumns":  [
+
+                                                                             ],
+                                                         "schema":  [
+                                                                        {
+                                                                            "id":  "inquiry_id",
+                                                                            "displayName":  "inquiry_id",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "received_at",
+                                                                            "displayName":  "received_at",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "category",
+                                                                            "displayName":  "category",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "priority",
+                                                                            "displayName":  "priority",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "summary",
+                                                                            "displayName":  "summary",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "required_action",
+                                                                            "displayName":  "required_action",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        },
+                                                                        {
+                                                                            "id":  "manual_review",
+                                                                            "displayName":  "manual_review",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true
+                                                                        }
+                                                                    ],
+                                                         "attemptToConvertTypes":  false,
+                                                         "convertFieldsToString":  false
+                                                     },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       1136,
+                                       -128
+                                   ],
+                      "id":  "7c54b479-9591-4b72-bb67-f498e3753973",
+                      "name":  "Append row in sheet",
+                      "credentials":  {
+                                          "googleSheetsOAuth2Api":  {
+                                                                        "id":  "YOUR_CREDENTIAL_ID",
+                                                                        "name":  "Google Sheets account"
+                                                                    }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict",
+                                                                            "version":  3
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "f68008f1-c7e2-4197-bb52-53bd55d6af4c",
+                                                                                   "leftValue":  "={{ $json.priority }}",
+                                                                                   "rightValue":  "high",
+                                                                                   "operator":  {
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals",
+                                                                                                    "name":  "filter.operator.equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.3,
+                      "position":  [
+                                       1360,
+                                       -128
+                                   ],
+                      "id":  "4d799139-9408-4fba-b551-4b27118ca83b",
+                      "name":  "If2"
+                  },
+                  {
+                      "parameters":  {
+                                         "authentication":  "oAuth2",
+                                         "select":  "channel",
+                                         "channelId":  {
+                                                           "__rl":  true,
+                                                           "value":  "YOUR_SLACK_CHANNEL_ID",
+                                                           "mode":  "list",
+                                                           "cachedResultName":  "#your-channel"
+                                                       },
+                                         "text":  "=🚨 High Priority Inquiry  Inquiry ID: {{ $(\"Code in JavaScript\").first().json.inquiry_id }}  Category: {{ $(\"Code in JavaScript\").first().json.analysis.category }}  Summary: {{ $(\"Code in JavaScript\").first().json.analysis.summary }}  Required Action: {{ $(\"Code in JavaScript\").first().json.analysis.required_action }}",
+                                         "otherOptions":  {
+
+                                                          }
+                                     },
+                      "type":  "n8n-nodes-base.slack",
+                      "typeVersion":  2.7,
+                      "position":  [
+                                       1600,
+                                       -176
+                                   ],
+                      "id":  "a17ef719-113b-438e-93e0-339765769f38",
+                      "name":  "Send a message",
+                      "webhookId":  "22fa606b-0151-425e-b097-0268d3fc5777",
+                      "credentials":  {
+                                          "slackOAuth2Api":  {
+                                                                 "id":  "YOUR_CREDENTIAL_ID",
+                                                                 "name":  "Slack account"
+                                                             }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{\n  {\n    status: \"ok\",\n    manual_review: false,\n    notification_sent: false\n  }\n}}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       1568,
+                                       48
+                                   ],
+                      "id":  "d03d9ce2-cbd2-4c8d-b825-440ec5558972",
+                      "name":  "Respond to Webhook3"
+                  }
+              ],
+    "pinData":  {
+
+                },
+    "connections":  {
+                        "Webhook":  {
+                                        "main":  [
+                                                     [
+                                                         {
+                                                             "node":  "If",
+                                                             "type":  "main",
+                                                             "index":  0
+                                                         }
+                                                     ]
+                                                 ]
+                                    },
+                        "If":  {
+                                   "main":  [
+                                                [
+                                                    {
+                                                        "node":  "Message a model",
+                                                        "type":  "main",
+                                                        "index":  0
+                                                    }
+                                                ],
+                                                [
+                                                    {
+                                                        "node":  "Respond to Webhook",
+                                                        "type":  "main",
+                                                        "index":  0
+                                                    }
+                                                ]
+                                            ]
+                               },
+                        "Message a model":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Code in JavaScript",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Code in JavaScript":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "If1",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "If1":  {
+                                    "main":  [
+                                                 [
+                                                     {
+                                                         "node":  "Append row in sheet",
+                                                         "type":  "main",
+                                                         "index":  0
+                                                     }
+                                                 ],
+                                                 [
+                                                     {
+                                                         "node":  "Respond to Webhook2",
+                                                         "type":  "main",
+                                                         "index":  0
+                                                     }
+                                                 ]
+                                             ]
+                                },
+                        "Append row in sheet":  {
+                                                    "main":  [
+                                                                 [
+                                                                     {
+                                                                         "node":  "If2",
+                                                                         "type":  "main",
+                                                                         "index":  0
+                                                                     }
+                                                                 ]
+                                                             ]
+                                                },
+                        "If2":  {
+                                    "main":  [
+                                                 [
+                                                     {
+                                                         "node":  "Send a message",
+                                                         "type":  "main",
+                                                         "index":  0
+                                                     }
+                                                 ],
+                                                 [
+                                                     {
+                                                         "node":  "Respond to Webhook3",
+                                                         "type":  "main",
+                                                         "index":  0
+                                                     }
+                                                 ]
+                                             ]
+                                },
+                        "Send a message":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Respond to Webhook1",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           }
+                    },
+    "active":  false,
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate"
+                 },
+    "versionId":  "5d3da636-fce9-4a37-8612-c87265472849",
+    "meta":  {
+                 "templateCredsSetupCompleted":  true,
+                 "instanceId":  "YOUR_N8N_INSTANCE_ID"
+             },
+    "nodeGroups":  [
+
+                   ],
+    "id":  "luNraRzuJUHGY47V",
+    "tags":  [
+
+             ]
+}
