@@ -29,6 +29,27 @@ Webhook
 - `high` priority のみSlack通知
 - 正常系 / 入力不正 / AI出力不正の分岐とWebhookレスポンス
 
+## Screenshots
+
+### Workflow Overview
+
+n8nで構築した問い合わせ一次整理ワークフローです。
+
+![n8n workflow overview](docs/images/workflow-overview.png)
+
+### Google Sheets Result
+
+AIによる分類・要約結果をGoogle Sheetsへ保存します。
+high / medium / low の3パターンを確認しています。
+
+![Google Sheets result](docs/images/google-sheets-result.png)
+
+### Slack Notification
+
+`priority = high` の問い合わせのみSlackへ通知します。
+
+![Slack high priority notification](docs/images/slack-notification.png)
+
 ## Safety Design
 
 - AI出力をそのまま後続処理へ渡さず、JSONとして解析可能か確認
