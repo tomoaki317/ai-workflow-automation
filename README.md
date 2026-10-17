@@ -2,6 +2,10 @@
 
 n8n / Make / OpenAI API を使い、問い合わせ内容をAIで分類・要約し、優先度に応じて記録・通知する業務自動化PoCです。
 
+問い合わせ内容の確認、分類・要約、優先度判断、Google Sheetsへの転記、高優先度の問い合わせのみのSlack通知にかかる手作業を減らすことを目的としています。
+
+同じ業務要件をn8nとMakeの両方で実装し、構成を比較しています。n8n版ではAI出力の検証と処理の制御を重視し、Make版ではGUI中心にシンプルに再実装しています。
+
 以下のWorkflowからn8n Workflowまではn8n版の説明です。Make版は「Make Version」で紹介します。
 
 ## Workflow
@@ -63,23 +67,16 @@ high / medium / low の3パターンを確認しています。
 
 ## Test Cases
 
-### High Priority
+以下はn8n版のテストです。`Confirmed` はワークフロー全体の実行確認を示します。`Partial` は一部の入力のみ確認済み、`No` は未確認です。期待結果と確認済みの範囲を分けて記載しています。
 
-- 複数ユーザーに影響
-- 代替手段なし
-- 業務停止
-- Google Sheetsへ保存
-- Slack通知あり
-- `notification_sent = true`
-
-### Medium Priority
-
-- 一部機能に問題
-- 代替手段あり
-- 業務継続可能
-- Google Sheetsへ保存
-- Slack通知なし
-- `notification_sent = false`
+| Case | 入力・条件 | 期待結果 | Confirmed | 確認済みの範囲・根拠 |
+| --- | --- | --- | --- | --- |
+| High Priority | 複数ユーザーに影響、代替手段なし、業務停止 | Google Sheetsへ保存、Slack通知あり、`notification_sent = true` | Yes | 実行記録 #34：`priority = high`、Sheets・Slack・正常レスポンスの各ノードを通過し正常終了 |
+| Medium Priority | 一部機能に問題、代替手段あり、業務継続可能 | Google Sheetsへ保存、Slack通知なし、`notification_sent = false` | Yes | 実行記録 #36：`priority = medium`、Sheetsから通知なしの正常レスポンスへ進み正常終了 |
+| Low Priority | 業務影響や緊急性のない操作方法等の問い合わせ | Google Sheetsへ保存、Slack通知なし、`notification_sent = false` | Yes | 実行記録 #37：`priority = low`、Sheetsから通知なしの正常レスポンスへ進み正常終了 |
+| Invalid Input | `inquiry_id` または `message` が未入力 | HTTP 400と必須入力エラーのWebhookレスポンス | No | 該当する実行記録は未確認 |
+| Invalid JSON | AI出力がJSONとして解析できない | Codeで `valid = false` / `manual_review = true`、`reason = invalid_json`。Webhookで `status = manual_review` | No | 該当する実行記録は未確認 |
+| Invalid Schema / Value | AI出力が `null`、配列、プリミティブ値、または不正な `category` | 例外なくCodeで `valid = false` / `manual_review = true`、`reason = invalid_schema_or_value`。If1のfalse側からWebhookで `status = manual_review` | Partial | `null` は実行記録 #39で `analysis = null`、If1のfalse側からRespond to Webhook2まで到達し正常終了。配列・プリミティブ値・不正categoryはCode単体で確認済み、ワークフロー全体は未確認 |
 
 ## Tech Stack
 
@@ -91,10 +88,80 @@ high / medium / low の3パターンを確認しています。
 
 ## Setup
 
-1. n8nを起動します（Docker Composeを利用できます）。
-2. n8nにOpenAI、Google Sheets、SlackのCredentialsを登録します。
-3. `n8n/inquiry-triage-workflow.public.json` をインポートします。
-4. Google SheetsのファイルとSlackチャンネルを自分の環境に合わせて設定し、Webhookを有効化します。
+### 1. n8nを起動
+
+DockerとDocker Composeを利用できる環境で、リポジトリのルートから実行します。
+
+```powershell
+docker compose up -d
+docker compose ps
+```
+
+ブラウザで `http://localhost:5678` を開きます。初回起動時に画面の案内に従ってアカウントを設定します。Composeでは `./n8n_data` にデータを保存します。イメージはリポジトリの `docker-compose.yml` の指定を使用します（固定バージョンの指定はありません）。
+
+### 2. 公開用ワークフローをインポート
+
+n8nでワークフローのメニューから **Import from File** を選び、`n8n/inquiry-triage-workflow.public.json` を読み込みます。公開用JSONの認証・接続先はプレースホルダーのため、以下の手動設定が必要です。
+
+### 3. Credentialsと接続先を設定
+
+n8nで自分のOpenAI / Google Sheets / SlackのCredentialsを作成し、各ノードで選択します。認証値はn8nのCredentialsに登録してください。
+
+| ノード | 必要な設定 |
+| --- | --- |
+| Message a model | OpenAI APIのCredential。モデルはJSONで指定されている `gpt-5-mini` を使用できることを確認 |
+| Append row in sheet | Google Sheets OAuth2のCredential。書き込み可能な自分のスプレッドシートとシートを選択 |
+| Send a message | Slack OAuth2のCredential。認証したアプリが投稿できる自分のチャンネルを選択 |
+
+Google Sheetsの対象シートの1行目に、次の列名を設定します。
+
+```text
+inquiry_id
+received_at
+category
+priority
+summary
+required_action
+manual_review
+```
+
+接続先の選択後、Append row in sheetの列マッピングがこれらの列に対応していることを確認します。
+
+### 4. Webhookへサンプルを送信
+
+サンプル入力は次のとおりです。
+
+```json
+{
+  "inquiry_id": "SAMPLE-001",
+  "message": "システムの一部機能が利用できませんが、代替手段で業務は継続できています。"
+}
+```
+
+Webhookノードに表示される **Test URL** をコピーし、ワークフロー全体の **Execute workflow** で待受を開始します。その後、PowerShellで次を実行してください。URLは実行時に入力するため、このREADMEには実環境のWebhook URLを記載していません。
+
+```powershell
+$webhookUrl = Read-Host "WebhookノードのTest URLを入力"
+
+$json = @{
+    inquiry_id = "SAMPLE-001"
+    message = "システムの一部機能が利用できませんが、代替手段で業務は継続できています。"
+} | ConvertTo-Json
+
+$body = [System.Text.Encoding]::UTF8.GetBytes($json)
+
+Invoke-RestMethod `
+    -Method Post `
+    -Uri $webhookUrl `
+    -ContentType "application/json; charset=utf-8" `
+    -Body $body
+```
+
+実行結果とGoogle Sheetsへの保存を確認します。AIの判定結果は入力や実行によって異なり、検証成功かつ `high` の場合のみSlack通知されます。検証失敗時は `manual_review` ステータスを返します。
+
+継続利用する場合は設定済みのワークフローを保存・公開（有効化）し、Webhookノードの **Production URL** を送信先に使用します。Test URLはテスト待受中に使用します。
+
+インポートとWebhookの扱いは、[n8n公式のインポート手順](https://docs.n8n.io/workflows/export-import/)と[Webhookの説明](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/)も参照してください。
 
 ## n8n Workflow
 
