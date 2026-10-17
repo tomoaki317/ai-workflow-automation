@@ -12,13 +12,21 @@ n8n / Make / OpenAI API を使い、問い合わせ内容をAIで分類・要約
 
 ```text
 Webhook
-→ Input Validation
-→ OpenAI
-→ JSON Parse / Validation
-→ Validation Failure Response (manual_review)
-→ Google Sheets
-→ Priority Check
-→ Slack Notification
+└─ If (Input Validation)
+   ├─ false → Respond to Webhook (Error Response)
+   └─ true → Message a model (OpenAI)
+              ↓
+            Code in JavaScript (JSON Parse / Validation)
+              ↓
+            If1 (valid)
+            ├─ false → Respond to Webhook2 (manual_review Response)
+            └─ true → Append row in sheet (Google Sheets)
+                        ↓
+                      If2 (Priority Check)
+                      ├─ high → Send a message (Slack)
+                      │           ↓
+                      │         Respond to Webhook1
+                      └─ medium / low → Respond to Webhook3
 ```
 
 必須入力（`inquiry_id` と `message`）を確認し、OpenAIで問い合わせを分類・要約します。AI出力をJSONとして解析・検証し、検証に成功した結果をGoogle Sheetsに保存します。`high` の場合だけSlackへ通知し、`medium` と `low` は通知しません。入力不正、AI出力不正はそれぞれ専用のWebhookレスポンスを返します。
@@ -165,13 +173,7 @@ Invoke-RestMethod `
 
 ## n8n Workflow
 
-`n8n/inquiry-triage-workflow.public.json` is a sanitized workflow export for public use.
-
-Before importing, configure your own credentials and resource IDs for:
-
-- OpenAI
-- Google Sheets
-- Slack
+`n8n/inquiry-triage-workflow.public.json` は、サニタイズ済みの公開用ワークフローです。インポートと認証・接続先の設定は、上記のSetupを参照してください。
 
 ## Make Version
 
