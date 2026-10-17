@@ -11,13 +11,13 @@ Webhook
 → Input Validation
 → OpenAI
 → JSON Parse / Validation
-→ Manual Review Routing
+→ Validation Failure Response (manual_review)
 → Google Sheets
 → Priority Check
 → Slack Notification
 ```
 
-必須入力（`inquiry_id` と `message`）を確認し、OpenAIで問い合わせを分類・要約します。AI出力をJSONとして解析・検証した後、結果をGoogle Sheetsに保存します。`high` の場合だけSlackへ通知し、`medium` と `low` は通知しません。入力不正、AI出力不正はそれぞれ専用のWebhookレスポンスを返します。
+必須入力（`inquiry_id` と `message`）を確認し、OpenAIで問い合わせを分類・要約します。AI出力をJSONとして解析・検証し、検証に成功した結果をGoogle Sheetsに保存します。`high` の場合だけSlackへ通知し、`medium` と `low` は通知しません。入力不正、AI出力不正はそれぞれ専用のWebhookレスポンスを返します。
 
 ## Implemented Features
 
@@ -26,7 +26,8 @@ Webhook
 - OpenAIによるカテゴリ分類・優先度判定・要約
 - AI出力のJSONパース
 - `category` / `priority` の許可値検証
-- 不正なAI出力を `manual_review` に分岐
+- `summary` / `required_action` が空でない文字列であることを検証
+- 不正なAI出力を検出すると `manual_review` ステータスをWebhookレスポンスとして返します。人による確認・承認、担当者への通知、確認待ちキューへの登録は未実装です。
 - Google Sheetsへの分析結果保存
 - `high` priority のみSlack通知
 - 正常系 / 入力不正 / AI出力不正の分岐とWebhookレスポンス
@@ -56,8 +57,8 @@ high / medium / low の3パターンを確認しています。
 
 - AI出力をそのまま後続処理へ渡さず、JSONとして解析可能か確認
 - `category` / `priority` が許可値に含まれるか検証
-- `summary` / `required_action` の必須項目を確認
-- 不正なAI出力は `manual_review` に分岐
+- `summary` / `required_action` の必須・型チェック（空でない文字列であること）
+- 不正なAI出力を検出すると `manual_review` ステータスをWebhookレスポンスとして返します。人による確認・承認、担当者への通知、確認待ちキューへの登録は未実装です。
 - 認証情報はn8n Credentialsで管理し、GitHubへ含めない
 
 ## Test Cases
@@ -170,8 +171,8 @@ high / medium / low の3パターンをGoogle Sheetsへ保存しています。
 
 両版とも、問い合わせの分類・優先度判定・要約、Google Sheetsへの保存、high priorityのみのSlack通知を実装しています。
 
-- n8n版: 入力チェック、JSONの解析・必須項目・許可値の検証、`manual_review` 分岐など、安全性と処理の制御を重視しています。
-- Make版: GUI中心で同じ業務フローをシンプルに再現しています。Parse JSONによる解析は行いますが、n8n版の必須項目・許可値の検証や `manual_review` 分岐は実装していません。
+- n8n版: 入力チェック、AI出力のJSON解析、`category` / `priority` の許可値検証、`summary` / `required_action` の必須・型チェック（空でない文字列であること）を実装しています。検証失敗時は `manual_review` ステータスをWebhookレスポンスとして返します。人による確認・承認、担当者への通知、確認待ちキューへの登録は未実装です。
+- Make版: GUI中心で同じ業務フローをシンプルに再現しています。Parse JSONによる解析は行いますが、n8n版の必須項目・許可値の検証や、検証失敗時に `manual_review` ステータスを返す処理は実装していません。
 
 ## Example
 
